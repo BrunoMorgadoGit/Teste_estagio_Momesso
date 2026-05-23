@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="220" viewBox="0 0 880 220" role="img" aria-labelledby="title">
+  <title id="title">MOMESSO</title>
+  <g fill="#F58220">
+    <path d="M32 184c8-34 27-62 54-82l17 27c-17 14-30 33-36 55H32Z" />
+    <path d="M81 94c9-6 18-10 28-13l9 31c-7 2-14 5-20 9L81 94Z" />
+    <path d="M116 79c8-1 16-1 24 0l-4 32c-5-1-10-1-15 0l-5-32Z" />
+    <path d="M148 82c9 3 17 8 24 14l-20 25c-5-4-10-7-16-9l12-30Z" />
+    <path d="M177 102c7 8 12 17 15 27l-30 10c-2-6-5-12-9-17l24-20Z" />
+    <path d="M194 137c1 9 1 18-1 27l-31-7c1-6 1-12 0-18l32-2Z" />
+    <path d="M190 172c-3 9-8 17-14 24l-24-21c4-5 7-10 10-16l28 13Z" />
+    <path d="M146 195c-8 4-17 6-26 7l-3-32c6-1 12-2 17-5l12 30Z" />
+    <path d="M113 201c-9-1-18-4-26-8l15-28c5 3 11 5 17 5l-6 31Z" />
+    <path d="M110 40c24-7 50-1 69 16 24 21 34 55 26 87l-30-8c5-20-1-42-17-56-13-12-31-16-48-11V40Z" />
+    <path d="M107 41v30c-13 4-24 12-32 23l-26-17c14-18 34-31 58-36Z" />
+    <path d="M45 84l27 16c-5 8-8 18-9 27H31c1-15 6-30 14-43Z" />
+    <path d="M31 135h32c1 8 3 16 7 24l-28 15c-6-12-10-25-11-39Z" />
+  </g>
+  <text x="230" y="155" fill="#F58220" font-family="Inter, Arial, Helvetica, sans-serif" font-size="118" font-weight="800" letter-spacing="2">MOMESSO</text>
+</svg>

@@ -4,7 +4,7 @@ Aplicação full stack para gerenciamento de empresas, usuários e máquinas, de
 
 ## Objetivo
 
-O projeto entrega uma API em NestJS e um front-end em Angular com autenticação JWT, CRUD completo para Company, User e Machine, relacionamento entre entidades e regras de acesso por perfil.
+O projeto entrega uma API em NestJS e um front-end em Angular com autenticação JWT, CRUD completo para administradores, visualização restrita para usuários comuns, relacionamento entre entidades e regras de acesso por perfil.
 
 ## Tecnologias
 
@@ -49,8 +49,9 @@ O projeto entrega uma API em NestJS e um front-end em Angular com autenticação
   - buscar por ID via API
   - atualizar
   - remover
-- Usuário `ADMIN` visualiza todos os registros.
+- Usuário `ADMIN` visualiza e gerencia todos os registros.
 - Usuário `USER` visualiza apenas registros da própria empresa.
+- Usuário `USER` navega nas mesmas telas, porém em modo somente leitura.
 - Seed com usuários e dados iniciais.
 - Arquivo SQL com políticas PostgreSQL RLS.
 
@@ -191,6 +192,12 @@ As rotas de CRUD exigem:
 ```http
 Authorization: Bearer <token>
 ```
+
+Permissões:
+
+- `ADMIN`: CRUD completo de empresas, usuários e máquinas.
+- `USER`: somente leitura de empresa, usuários e máquinas da própria `companyId`.
+- `USER`: recebe `403 Forbidden` ao tentar criar, editar ou excluir registros administrativos.
 
 ## Segurança e RLS
 

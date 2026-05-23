@@ -26,7 +26,7 @@ export class MachineService {
     createMachineDto: CreateMachineDto,
     currentUser?: AuthenticatedUser,
   ): Promise<Machine> {
-    this.ensureCompanyAccess(createMachineDto.companyId, currentUser);
+    this.ensureAdmin(currentUser);
     await this.ensureCompanyExists(createMachineDto.companyId);
     await this.ensureSerialNumberIsAvailable(createMachineDto.serialNumber);
 
@@ -64,11 +64,10 @@ export class MachineService {
     updateMachineDto: UpdateMachineDto,
     currentUser?: AuthenticatedUser,
   ): Promise<Machine> {
-    const machine = await this.findOne(id);
-    this.ensureCompanyAccess(machine.companyId, currentUser);
+    this.ensureAdmin(currentUser);
+    const machine = await this.findOne(id, currentUser);
 
     if (updateMachineDto.companyId) {
-      this.ensureCompanyAccess(updateMachineDto.companyId, currentUser);
       await this.ensureCompanyExists(updateMachineDto.companyId);
     }
 
@@ -84,8 +83,8 @@ export class MachineService {
   }
 
   async remove(id: number, currentUser?: AuthenticatedUser): Promise<void> {
-    const machine = await this.findOne(id);
-    this.ensureCompanyAccess(machine.companyId, currentUser);
+    this.ensureAdmin(currentUser);
+    await this.findOne(id, currentUser);
 
     const result = await this.machineRepository.delete(id);
 
@@ -125,6 +124,12 @@ export class MachineService {
       currentUser.companyId !== companyId
     ) {
       throw new ForbiddenException('You cannot access this company');
+    }
+  }
+
+  private ensureAdmin(currentUser?: AuthenticatedUser): void {
+    if (currentUser && currentUser.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only admin users can perform this action');
     }
   }
 }

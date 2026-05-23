@@ -8,7 +8,7 @@ export interface LoginResponse {
 }
 
 export interface AuthenticatedUser {
-  id?: number;
+  id: number;
   sub?: number;
   email: string;
   role: UserRole;

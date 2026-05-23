@@ -1,5 +1,10 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Repository } from 'typeorm';
+import { UserRole } from '../common/enums/user-role.enum';
 import { CompanyService } from './company.service';
 import { Company } from './entities/company.entity';
 
@@ -19,6 +24,13 @@ describe('CompanyService', () => {
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     users: [],
     machines: [],
+  };
+
+  const regularUser = {
+    id: 2,
+    email: 'user@momesso.com',
+    role: UserRole.USER,
+    companyId: 1,
   };
 
   beforeEach(() => {
@@ -51,6 +63,12 @@ describe('CompanyService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
+  it('should reject company creation by USER role', async () => {
+    await expect(
+      service.create({ name: company.name, cnpj: company.cnpj }, regularUser),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
   it('should throw not found when company does not exist', async () => {
     repository.findOne.mockResolvedValue(null);
 
@@ -66,5 +84,17 @@ describe('CompanyService', () => {
     });
 
     await expect(service.remove(1)).resolves.toBeUndefined();
+  });
+
+  it('should reject company update by USER role', async () => {
+    await expect(
+      service.update(1, { name: 'Blocked update' }, regularUser),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('should reject company removal by USER role', async () => {
+    await expect(service.remove(1, regularUser)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
   });
 });

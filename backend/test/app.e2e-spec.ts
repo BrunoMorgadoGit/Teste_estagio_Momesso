@@ -190,6 +190,9 @@ describe('Backend API (e2e)', () => {
     expect(typeof body.accessToken).toBe('string');
     expect(body.user.id).toBe(seedUserId);
     expect(body.user.password).toBeUndefined();
+    expect(body.user.email).toBe(seedEmail);
+    expect(body.user.role).toBe(UserRole.ADMIN);
+    expect(body.user.companyId).toBe(seedCompanyId);
     accessToken = body.accessToken;
   });
 
@@ -205,7 +208,9 @@ describe('Backend API (e2e)', () => {
 
     expect(typeof body.accessToken).toBe('string');
     expect(body.user.id).toBe(seedRegularUserId);
+    expect(body.user.email).toBe(seedUserEmail);
     expect(body.user.role).toBe(UserRole.USER);
+    expect(body.user.companyId).toBe(seedCompanyId);
     userAccessToken = body.accessToken;
   });
 
@@ -224,6 +229,22 @@ describe('Backend API (e2e)', () => {
     expect(body.email).toBe(seedEmail);
     expect(body.role).toBe(UserRole.ADMIN);
     expect(body.companyId).toBe(seedCompanyId);
+  });
+
+  it('JWT payload should include sub, email, role and companyId', () => {
+    const payload = JSON.parse(
+      Buffer.from(accessToken.split('.')[1], 'base64url').toString('utf-8'),
+    ) as {
+      sub: number;
+      email: string;
+      role: UserRole;
+      companyId: number;
+    };
+
+    expect(payload.sub).toBe(seedUserId);
+    expect(payload.email).toBe(seedEmail);
+    expect(payload.role).toBe(UserRole.ADMIN);
+    expect(payload.companyId).toBe(seedCompanyId);
   });
 
   it('POST /company should validate payload with authenticated request', () => {
@@ -408,6 +429,72 @@ describe('Backend API (e2e)', () => {
       .patch(`/machine/${machineId}`)
       .set('Authorization', `Bearer ${userAccessToken}`)
       .send({ name: 'Forbidden Update' })
+      .expect(403);
+  });
+
+  it('USER should be blocked from administrative writes even within own company', async () => {
+    await request(app.getHttpServer())
+      .post('/company')
+      .set('Authorization', `Bearer ${userAccessToken}`)
+      .send({
+        name: `Forbidden Company ${suffix}`,
+        cnpj: `forbidden-${suffix}`,
+      })
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .patch(`/company/${seedCompanyId}`)
+      .set('Authorization', `Bearer ${userAccessToken}`)
+      .send({ name: 'Forbidden Company Update' })
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .delete(`/company/${seedCompanyId}`)
+      .set('Authorization', `Bearer ${userAccessToken}`)
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .post('/user')
+      .set('Authorization', `Bearer ${userAccessToken}`)
+      .send({
+        name: `Forbidden Admin ${suffix}`,
+        email: `forbidden-admin-${suffix}@momesso.com`,
+        password: '123456',
+        role: UserRole.ADMIN,
+        companyId: seedCompanyId,
+      })
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .patch(`/user/${seedRegularUserId}`)
+      .set('Authorization', `Bearer ${userAccessToken}`)
+      .send({ name: 'Forbidden User Update' })
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .delete(`/user/${seedRegularUserId}`)
+      .set('Authorization', `Bearer ${userAccessToken}`)
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .post('/machine')
+      .set('Authorization', `Bearer ${userAccessToken}`)
+      .send({
+        name: `Forbidden Machine ${suffix}`,
+        serialNumber: `FORBIDDEN-SN-${suffix}`,
+        companyId: seedCompanyId,
+      })
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .patch(`/machine/${seedMachineId}`)
+      .set('Authorization', `Bearer ${userAccessToken}`)
+      .send({ name: 'Forbidden Machine Update' })
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .delete(`/machine/${seedMachineId}`)
+      .set('Authorization', `Bearer ${userAccessToken}`)
       .expect(403);
   });
 

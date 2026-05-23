@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 
 import { AuthenticatedUser, LoginResponse } from '../models/auth.model';
+import { UserRole } from '../models/user.model';
 
 const TOKEN_KEY = 'token';
 const LEGACY_TOKEN_KEY = 'momesso_access_token';
@@ -44,7 +45,7 @@ export class AuthService {
       return false;
     }
 
-    const user = this.getUserFromToken();
+    const user = this.getCurrentUser();
 
     if (user?.exp && Date.now() >= user.exp * 1000) {
       localStorage.removeItem(TOKEN_KEY);
@@ -55,6 +56,10 @@ export class AuthService {
   }
 
   getUserFromToken(): AuthenticatedUser | null {
+    return this.getCurrentUser();
+  }
+
+  getCurrentUser(): AuthenticatedUser | null {
     const token = this.getToken();
 
     if (!token) {
@@ -63,14 +68,31 @@ export class AuthService {
 
     try {
       const payload = token.split('.')[1];
-      return JSON.parse(atob(payload)) as AuthenticatedUser;
+      const parsed = JSON.parse(atob(payload)) as Partial<AuthenticatedUser>;
+      const id = Number(parsed.id ?? parsed.sub);
+      const companyId = Number(parsed.companyId);
+
+      if (!id || !parsed.email || !parsed.role || !companyId) {
+        return null;
+      }
+
+      return {
+        ...parsed,
+        id,
+        companyId,
+        role: parsed.role as UserRole,
+      } as AuthenticatedUser;
     } catch {
       return null;
     }
   }
 
   isAdmin(): boolean {
-    return this.getUserFromToken()?.role === 'ADMIN';
+    return this.getCurrentUser()?.role === 'ADMIN';
+  }
+
+  isUser(): boolean {
+    return this.getCurrentUser()?.role === 'USER';
   }
 
   private setToken(token: string): void {

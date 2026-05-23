@@ -10,6 +10,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 
 import { Company, CreateCompanyRequest } from '../../core/models/company.model';
+import { AuthService } from '../../core/services/auth.service';
 import { CompanyService } from '../../core/services/company.service';
 
 @Component({
@@ -18,14 +19,20 @@ import { CompanyService } from '../../core/services/company.service';
   template: `
     <section class="page-header">
       <div>
-        <p class="eyebrow">Admin / Empresas</p>
+        <p class="eyebrow">{{ isAdmin ? 'Admin' : 'Consulta' }} / Empresas</p>
         <h2>Empresas</h2>
-        <p class="page-subtitle">Gerencie as empresas cadastradas no sistema.</p>
+        <p class="page-subtitle">
+          {{ isAdmin
+            ? 'Gerencie as empresas cadastradas no sistema.'
+            : 'Visualize apenas a empresa vinculada ao seu usuário.' }}
+        </p>
       </div>
-      <button type="button" class="button primary" (click)="startNewCompany()">
-        <span aria-hidden="true">+</span>
-        Nova empresa
-      </button>
+      @if (isAdmin) {
+        <button type="button" class="button primary" (click)="startNewCompany()">
+          <span aria-hidden="true">+</span>
+          Nova empresa
+        </button>
+      }
     </section>
 
     @if (message) {
@@ -34,45 +41,50 @@ import { CompanyService } from '../../core/services/company.service';
     @if (errorMessage) {
       <div class="alert error">{{ errorMessage }}</div>
     }
+    @if (!isAdmin) {
+      <div class="alert success">Seu perfil possui acesso somente para consulta de empresas.</div>
+    }
 
-    <section
-      #companyFormPanel
-      class="panel"
-      [class.panel-highlight]="formHighlighted"
-      tabindex="-1"
-    >
-      <div class="panel-heading">
-        <div>
-          <h3>{{ editingId ? 'Editar empresa' : 'Cadastrar empresa' }}</h3>
-          <p>
-            Preencha os dados principais para manter o cadastro corporativo atualizado.
-          </p>
+    @if (isAdmin) {
+      <section
+        #companyFormPanel
+        class="panel"
+        [class.panel-highlight]="formHighlighted"
+        tabindex="-1"
+      >
+        <div class="panel-heading">
+          <div>
+            <h3>{{ editingId ? 'Editar empresa' : 'Cadastrar empresa' }}</h3>
+            <p>
+              Preencha os dados principais para manter o cadastro corporativo atualizado.
+            </p>
+          </div>
         </div>
-      </div>
-      <form [formGroup]="form" (ngSubmit)="save()" class="entity-form">
-        <label>
-          Nome
-          <input
-            #companyNameInput
-            type="text"
-            formControlName="name"
-            placeholder="Ex.: Momesso Industrial"
-          />
-        </label>
-        <label>
-          CNPJ
-          <input type="text" formControlName="cnpj" placeholder="00.000.000/0001-00" />
-        </label>
-        <div class="form-actions">
-          <button class="button primary" type="submit" [disabled]="form.invalid || loading">
-            {{ editingId ? 'Salvar alterações' : 'Criar empresa' }}
-          </button>
-          @if (editingId) {
-            <button type="button" class="button secondary" (click)="resetForm()">Cancelar</button>
-          }
-        </div>
-      </form>
-    </section>
+        <form [formGroup]="form" (ngSubmit)="save()" class="entity-form">
+          <label>
+            Nome
+            <input
+              #companyNameInput
+              type="text"
+              formControlName="name"
+              placeholder="Ex.: Momesso Industrial"
+            />
+          </label>
+          <label>
+            CNPJ
+            <input type="text" formControlName="cnpj" placeholder="00.000.000/0001-00" />
+          </label>
+          <div class="form-actions">
+            <button class="button primary" type="submit" [disabled]="form.invalid || loading">
+              {{ editingId ? 'Salvar alterações' : 'Criar empresa' }}
+            </button>
+            @if (editingId) {
+              <button type="button" class="button secondary" (click)="resetForm()">Cancelar</button>
+            }
+          </div>
+        </form>
+      </section>
+    }
 
     <section class="panel">
       <div class="table-header">
@@ -95,13 +107,15 @@ import { CompanyService } from '../../core/services/company.service';
               <th>Nome</th>
               <th>CNPJ</th>
               <th>Criado em</th>
-              <th>Ações</th>
+              @if (isAdmin) {
+                <th>Ações</th>
+              }
             </tr>
           </thead>
           <tbody>
             @if (companiesLoading) {
               <tr>
-                <td colspan="5" class="empty-state">
+                <td [attr.colspan]="isAdmin ? 5 : 4" class="empty-state">
                   <div class="empty-state-content">
                     <span class="loading-dot" aria-hidden="true"></span>
                     <strong>Carregando empresas...</strong>
@@ -111,7 +125,7 @@ import { CompanyService } from '../../core/services/company.service';
               </tr>
             } @else if (errorMessage && companiesLoaded && companies.length === 0) {
               <tr>
-                <td colspan="5" class="empty-state">
+                <td [attr.colspan]="isAdmin ? 5 : 4" class="empty-state">
                   <div class="empty-state-content">
                     <strong>Não foi possível carregar as empresas.</strong>
                     <span>Verifique sua conexão ou tente atualizar novamente.</span>
@@ -125,14 +139,16 @@ import { CompanyService } from '../../core/services/company.service';
                   <td>{{ company.name }}</td>
                   <td>{{ company.cnpj }}</td>
                   <td>{{ formatDate(company.createdAt) }}</td>
-                  <td class="actions">
-                    <button type="button" class="button compact" (click)="edit(company)">Editar</button>
-                    <button type="button" class="button danger compact" (click)="remove(company)">Excluir</button>
-                  </td>
+                  @if (isAdmin) {
+                    <td class="actions">
+                      <button type="button" class="button compact" (click)="edit(company)">Editar</button>
+                      <button type="button" class="button danger compact" (click)="remove(company)">Excluir</button>
+                    </td>
+                  }
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="5" class="empty-state">
+                  <td [attr.colspan]="isAdmin ? 5 : 4" class="empty-state">
                     <div class="empty-state-content">
                       <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16" />
@@ -153,6 +169,7 @@ import { CompanyService } from '../../core/services/company.service';
   `
 })
 export class CompaniesComponent implements OnInit {
+  private readonly authService = inject(AuthService);
   private readonly companyService = inject(CompanyService);
   private readonly fb = inject(FormBuilder);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -167,6 +184,7 @@ export class CompaniesComponent implements OnInit {
   formHighlighted = false;
   errorMessage = '';
   message = '';
+  readonly isAdmin = this.authService.isAdmin();
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required]],
@@ -196,6 +214,11 @@ export class CompaniesComponent implements OnInit {
   }
 
   save(): void {
+    if (!this.isAdmin) {
+      this.blockAdminOnlyAction();
+      return;
+    }
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -219,12 +242,22 @@ export class CompaniesComponent implements OnInit {
   }
 
   edit(company: Company): void {
+    if (!this.isAdmin) {
+      this.blockAdminOnlyAction();
+      return;
+    }
+
     this.editingId = company.id;
     this.form.patchValue({ name: company.name, cnpj: company.cnpj });
     this.focusCompanyForm();
   }
 
   remove(company: Company): void {
+    if (!this.isAdmin) {
+      this.blockAdminOnlyAction();
+      return;
+    }
+
     if (!confirm(`Excluir empresa ${company.name}?`)) {
       return;
     }
@@ -245,6 +278,11 @@ export class CompaniesComponent implements OnInit {
   }
 
   startNewCompany(): void {
+    if (!this.isAdmin) {
+      this.blockAdminOnlyAction();
+      return;
+    }
+
     this.resetForm();
     this.focusCompanyForm();
   }
@@ -280,5 +318,10 @@ export class CompaniesComponent implements OnInit {
     this.errorMessage = error.status === 403
       ? 'Acesso negado para esta operação.'
       : 'Não foi possível processar a solicitação.';
+  }
+
+  private blockAdminOnlyAction(): void {
+    this.message = '';
+    this.errorMessage = 'Somente administradores podem criar, editar ou excluir empresas.';
   }
 }

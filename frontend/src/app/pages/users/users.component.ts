@@ -11,6 +11,7 @@ import { finalize } from 'rxjs';
 
 import { Company } from '../../core/models/company.model';
 import { CreateUserRequest, UpdateUserRequest, User, UserRole } from '../../core/models/user.model';
+import { AuthService } from '../../core/services/auth.service';
 import { CompanyService } from '../../core/services/company.service';
 import { UserService } from '../../core/services/user.service';
 
@@ -20,14 +21,20 @@ import { UserService } from '../../core/services/user.service';
   template: `
     <section class="page-header">
       <div>
-        <p class="eyebrow">Admin / Usuários</p>
+        <p class="eyebrow">{{ isAdmin ? 'Admin' : 'Consulta' }} / Usuários</p>
         <h2>Usuários</h2>
-        <p class="page-subtitle">Gerencie os usuários cadastrados no sistema.</p>
+        <p class="page-subtitle">
+          {{ isAdmin
+            ? 'Gerencie os usuários cadastrados no sistema.'
+            : 'Visualize apenas os usuários da sua própria empresa.' }}
+        </p>
       </div>
-      <button type="button" class="button primary" (click)="startNewUser()">
-        <span aria-hidden="true">+</span>
-        Novo usuário
-      </button>
+      @if (isAdmin) {
+        <button type="button" class="button primary" (click)="startNewUser()">
+          <span aria-hidden="true">+</span>
+          Novo usuário
+        </button>
+      }
     </section>
 
     @if (message) {
@@ -36,53 +43,58 @@ import { UserService } from '../../core/services/user.service';
     @if (errorMessage) {
       <div class="alert error">{{ errorMessage }}</div>
     }
+    @if (!isAdmin) {
+      <div class="alert success">Seu perfil possui acesso somente para consulta de usuários.</div>
+    }
 
-    <section #userFormPanel class="panel" [class.panel-highlight]="formHighlighted" tabindex="-1">
-      <div class="panel-heading">
-        <div>
-          <h3>{{ editingId ? 'Editar usuário' : 'Cadastrar usuário' }}</h3>
-          <p>Informe os dados de acesso e vínculo corporativo do usuário.</p>
+    @if (isAdmin) {
+      <section #userFormPanel class="panel" [class.panel-highlight]="formHighlighted" tabindex="-1">
+        <div class="panel-heading">
+          <div>
+            <h3>{{ editingId ? 'Editar usuário' : 'Cadastrar usuário' }}</h3>
+            <p>Informe os dados de acesso e vínculo corporativo do usuário.</p>
+          </div>
         </div>
-      </div>
-      <form [formGroup]="form" (ngSubmit)="save()" class="entity-form">
-        <label>
-          Nome
-          <input #userNameInput type="text" formControlName="name" placeholder="Ex.: Admin Momesso" />
-        </label>
-        <label>
-          Email
-          <input type="email" formControlName="email" placeholder="usuario@momesso.com" />
-        </label>
-        <label>
-          Senha
-          <input type="password" formControlName="password" [placeholder]="editingId ? 'Deixe em branco para manter' : ''" />
-        </label>
-        <label>
-          Role
-          <select formControlName="role">
-            <option value="ADMIN">ADMIN</option>
-            <option value="USER">USER</option>
-          </select>
-        </label>
-        <label>
-          Empresa
-          <select formControlName="companyId">
-            <option [ngValue]="0">Selecione uma empresa</option>
-            @for (company of companies; track company.id) {
-              <option [ngValue]="company.id">{{ company.name }} #{{ company.id }}</option>
+        <form [formGroup]="form" (ngSubmit)="save()" class="entity-form">
+          <label>
+            Nome
+            <input #userNameInput type="text" formControlName="name" placeholder="Ex.: Admin Momesso" />
+          </label>
+          <label>
+            Email
+            <input type="email" formControlName="email" placeholder="usuario@momesso.com" />
+          </label>
+          <label>
+            Senha
+            <input type="password" formControlName="password" [placeholder]="editingId ? 'Deixe em branco para manter' : ''" />
+          </label>
+          <label>
+            Role
+            <select formControlName="role">
+              <option value="ADMIN">ADMIN</option>
+              <option value="USER">USER</option>
+            </select>
+          </label>
+          <label>
+            Empresa
+            <select formControlName="companyId">
+              <option [ngValue]="0">Selecione uma empresa</option>
+              @for (company of companies; track company.id) {
+                <option [ngValue]="company.id">{{ company.name }} #{{ company.id }}</option>
+              }
+            </select>
+          </label>
+          <div class="form-actions">
+            <button class="button primary" type="submit" [disabled]="form.invalid || loading">
+              {{ editingId ? 'Salvar alterações' : 'Criar usuário' }}
+            </button>
+            @if (editingId) {
+              <button type="button" class="button secondary" (click)="resetForm()">Cancelar</button>
             }
-          </select>
-        </label>
-        <div class="form-actions">
-          <button class="button primary" type="submit" [disabled]="form.invalid || loading">
-            {{ editingId ? 'Salvar alterações' : 'Criar usuário' }}
-          </button>
-          @if (editingId) {
-            <button type="button" class="button secondary" (click)="resetForm()">Cancelar</button>
-          }
-        </div>
-      </form>
-    </section>
+          </div>
+        </form>
+      </section>
+    }
 
     <section class="panel">
       <div class="table-header">
@@ -102,13 +114,15 @@ import { UserService } from '../../core/services/user.service';
               <th>Role</th>
               <th>Company ID</th>
               <th>Criado em</th>
-              <th>Ações</th>
+              @if (isAdmin) {
+                <th>Ações</th>
+              }
             </tr>
           </thead>
           <tbody>
             @if (usersLoading) {
               <tr>
-                <td colspan="7" class="empty-state">
+                <td [attr.colspan]="isAdmin ? 7 : 6" class="empty-state">
                   <div class="empty-state-content">
                     <span class="loading-dot" aria-hidden="true"></span>
                     <strong>Carregando usuários...</strong>
@@ -118,7 +132,7 @@ import { UserService } from '../../core/services/user.service';
               </tr>
             } @else if (errorMessage && usersLoaded && users.length === 0) {
               <tr>
-                <td colspan="7" class="empty-state">
+                <td [attr.colspan]="isAdmin ? 7 : 6" class="empty-state">
                   <div class="empty-state-content">
                     <strong>Não foi possível carregar os usuários.</strong>
                     <span>Verifique sua conexão ou tente atualizar novamente.</span>
@@ -134,14 +148,16 @@ import { UserService } from '../../core/services/user.service';
                   <td><span class="badge">{{ user.role }}</span></td>
                   <td>{{ user.companyId }}</td>
                   <td>{{ formatDate(user.createdAt) }}</td>
-                  <td class="actions">
-                    <button type="button" class="button compact" (click)="edit(user)">Editar</button>
-                    <button type="button" class="button danger compact" (click)="remove(user)">Excluir</button>
-                  </td>
+                  @if (isAdmin) {
+                    <td class="actions">
+                      <button type="button" class="button compact" (click)="edit(user)">Editar</button>
+                      <button type="button" class="button danger compact" (click)="remove(user)">Excluir</button>
+                    </td>
+                  }
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="7" class="empty-state">
+                  <td [attr.colspan]="isAdmin ? 7 : 6" class="empty-state">
                     <div class="empty-state-content">
                       <strong>Nenhum usuário encontrado.</strong>
                       <span>Cadastre seu primeiro usuário para começar.</span>
@@ -157,6 +173,7 @@ import { UserService } from '../../core/services/user.service';
   `
 })
 export class UsersComponent implements OnInit {
+  private readonly authService = inject(AuthService);
   private readonly userService = inject(UserService);
   private readonly companyService = inject(CompanyService);
   private readonly fb = inject(FormBuilder);
@@ -173,6 +190,7 @@ export class UsersComponent implements OnInit {
   formHighlighted = false;
   errorMessage = '';
   message = '';
+  readonly isAdmin = this.authService.isAdmin();
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required]],
@@ -221,6 +239,11 @@ export class UsersComponent implements OnInit {
   }
 
   save(): void {
+    if (!this.isAdmin) {
+      this.blockAdminOnlyAction();
+      return;
+    }
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -245,6 +268,11 @@ export class UsersComponent implements OnInit {
   }
 
   edit(user: User): void {
+    if (!this.isAdmin) {
+      this.blockAdminOnlyAction();
+      return;
+    }
+
     this.editingId = user.id;
     this.form.controls.password.clearValidators();
     this.form.controls.password.updateValueAndValidity();
@@ -259,6 +287,11 @@ export class UsersComponent implements OnInit {
   }
 
   remove(user: User): void {
+    if (!this.isAdmin) {
+      this.blockAdminOnlyAction();
+      return;
+    }
+
     if (!confirm(`Excluir usuário ${user.name}?`)) {
       return;
     }
@@ -287,6 +320,11 @@ export class UsersComponent implements OnInit {
   }
 
   startNewUser(): void {
+    if (!this.isAdmin) {
+      this.blockAdminOnlyAction();
+      return;
+    }
+
     this.resetForm();
     this.focusUserForm();
   }
@@ -368,5 +406,10 @@ export class UsersComponent implements OnInit {
     this.errorMessage = error.status === 403
       ? 'Acesso negado para esta operação.'
       : 'Não foi possível excluir o usuário. Tente novamente.';
+  }
+
+  private blockAdminOnlyAction(): void {
+    this.message = '';
+    this.errorMessage = 'Somente administradores podem criar, editar ou excluir usuários.';
   }
 }

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Company } from '../../core/models/company.model';
 import { CreateUserRequest, User } from '../../core/models/user.model';
+import { AuthService } from '../../core/services/auth.service';
 import { CompanyService } from '../../core/services/company.service';
 import { UserService } from '../../core/services/user.service';
 import { UsersComponent } from './users.component';
@@ -38,6 +39,7 @@ describe('UsersComponent', () => {
     remove: ReturnType<typeof vi.fn>;
   };
   let companyService: { findAll: ReturnType<typeof vi.fn> };
+  let authService: { isAdmin: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     userService = {
@@ -49,6 +51,9 @@ describe('UsersComponent', () => {
     companyService = {
       findAll: vi.fn<() => Observable<Company[]>>()
     };
+    authService = {
+      isAdmin: vi.fn(() => true)
+    };
 
     userService.findAll.mockReturnValue(of(usersMock));
     companyService.findAll.mockReturnValue(of(companiesMock));
@@ -57,7 +62,8 @@ describe('UsersComponent', () => {
       imports: [UsersComponent],
       providers: [
         { provide: UserService, useValue: userService },
-        { provide: CompanyService, useValue: companyService }
+        { provide: CompanyService, useValue: companyService },
+        { provide: AuthService, useValue: authService }
       ]
     });
 
@@ -208,5 +214,21 @@ describe('UsersComponent', () => {
     expect(userService.remove).toHaveBeenCalledWith(1);
     expect(userService.findAll).toHaveBeenCalledTimes(2);
     expect(component.message).toBe('Usuário excluído.');
+  });
+
+  it('renders users in read-only mode for USER', () => {
+    authService.isAdmin.mockReturnValue(false);
+    fixture = TestBed.createComponent(UsersComponent);
+    component = fixture.componentInstance;
+
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain(
+      'Seu perfil possui acesso somente para consulta de usuários.'
+    );
+    expect(fixture.nativeElement.textContent).not.toContain('Novo usuário');
+    expect(fixture.nativeElement.textContent).not.toContain('Criar usuário');
+    expect(fixture.nativeElement.textContent).not.toContain('Editar');
+    expect(fixture.nativeElement.textContent).not.toContain('Excluir');
   });
 });

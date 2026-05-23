@@ -47,4 +47,27 @@ describe('AuthService', () => {
     expect(service.getToken()).toBe('snake-token');
     expect(localStorage.getItem('momesso_access_token')).toBeNull();
   });
+
+  it('normalizes JWT payload fields for the current user', () => {
+    const payload = btoa(JSON.stringify({
+      sub: 7,
+      email: 'user@momesso.com',
+      role: 'USER',
+      companyId: 3,
+      exp: Math.floor(Date.now() / 1000) + 3600
+    }));
+
+    localStorage.setItem('token', `header.${payload}.signature`);
+
+    expect(service.getCurrentUser()).toEqual({
+      id: 7,
+      sub: 7,
+      email: 'user@momesso.com',
+      role: 'USER',
+      companyId: 3,
+      exp: expect.any(Number)
+    });
+    expect(service.isUser()).toBe(true);
+    expect(service.isAdmin()).toBe(false);
+  });
 });

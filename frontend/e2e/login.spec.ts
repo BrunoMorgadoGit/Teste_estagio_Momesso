@@ -13,3 +13,16 @@ test('logs in through the Angular form and opens companies', async ({ page }) =>
   const tokenLength = await page.evaluate(() => localStorage.getItem('token')?.length ?? 0);
   expect(tokenLength).toBeGreaterThan(0);
 });
+
+test('logs in as USER and shows role-aware session info', async ({ page }) => {
+  await page.goto('/login');
+
+  await page.getByLabel('Email').fill('user@momesso.com');
+  await page.locator('input[formcontrolname="password"]').fill('User@123');
+  await page.getByRole('button', { name: 'Entrar' }).click();
+
+  await expect(page).toHaveURL(/\/companies$/);
+  await expect(page.locator('.user-box')).toContainText('user@momesso.com');
+  await expect(page.locator('.user-box')).toContainText('USER');
+  await expect(page.locator('.sidebar-brand')).toContainText('Painel USER');
+});

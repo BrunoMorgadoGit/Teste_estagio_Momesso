@@ -27,7 +27,7 @@ export class UserService {
     createUserDto: CreateUserDto,
     currentUser?: AuthenticatedUser,
   ): Promise<Omit<User, 'password'>> {
-    this.ensureCompanyAccess(createUserDto.companyId, currentUser);
+    this.ensureAdmin(currentUser);
     await this.ensureCompanyExists(createUserDto.companyId);
     await this.ensureEmailIsAvailable(createUserDto.email);
 
@@ -84,11 +84,10 @@ export class UserService {
     updateUserDto: UpdateUserDto,
     currentUser?: AuthenticatedUser,
   ): Promise<Omit<User, 'password'>> {
+    this.ensureAdmin(currentUser);
     const user = await this.findEntityById(id);
-    this.ensureCompanyAccess(user.companyId, currentUser);
 
     if (updateUserDto.companyId) {
-      this.ensureCompanyAccess(updateUserDto.companyId, currentUser);
       await this.ensureCompanyExists(updateUserDto.companyId);
     }
 
@@ -106,8 +105,8 @@ export class UserService {
   }
 
   async remove(id: number, currentUser?: AuthenticatedUser): Promise<void> {
-    const user = await this.findEntityById(id);
-    this.ensureCompanyAccess(user.companyId, currentUser);
+    this.ensureAdmin(currentUser);
+    await this.findEntityById(id);
 
     const result = await this.userRepository.delete(id);
 
@@ -162,6 +161,12 @@ export class UserService {
       currentUser.companyId !== companyId
     ) {
       throw new ForbiddenException('You cannot access this company');
+    }
+  }
+
+  private ensureAdmin(currentUser?: AuthenticatedUser): void {
+    if (currentUser && currentUser.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only admin users can perform this action');
     }
   }
 }

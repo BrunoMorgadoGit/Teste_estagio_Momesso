@@ -11,7 +11,7 @@ import { AuthService } from '../../core/services/auth.service';
       <aside class="sidebar">
         <div class="sidebar-brand">
           <img src="/logomomesso.webp" alt="MOMESSO" />
-          <span>Admin</span>
+          <span>{{ sidebarLabel }}</span>
         </div>
 
         <nav class="nav-links" aria-label="Menu principal">
@@ -57,9 +57,10 @@ import { AuthService } from '../../core/services/auth.service';
 })
 export class MainLayoutComponent {
   private readonly authService = inject(AuthService);
-  readonly user = this.authService.getUserFromToken();
+  readonly user = this.authService.getCurrentUser();
   readonly userEmail = this.user?.email ?? 'Usuário autenticado';
   readonly userRole = this.user?.role ?? 'USER';
+  readonly sidebarLabel = `Painel ${this.userRole}`;
 
   logout(): void {
     this.authService.logout();

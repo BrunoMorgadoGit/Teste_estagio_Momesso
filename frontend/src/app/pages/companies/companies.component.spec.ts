@@ -3,6 +3,7 @@ import { Observable, Subject, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Company, CreateCompanyRequest } from '../../core/models/company.model';
+import { AuthService } from '../../core/services/auth.service';
 import { CompanyService } from '../../core/services/company.service';
 import { CompaniesComponent } from './companies.component';
 
@@ -24,6 +25,7 @@ describe('CompaniesComponent', () => {
     update: ReturnType<typeof vi.fn>;
     remove: ReturnType<typeof vi.fn>;
   };
+  let authService: { isAdmin: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     companyService = {
@@ -32,12 +34,18 @@ describe('CompaniesComponent', () => {
       update: vi.fn<(id: number, payload: CreateCompanyRequest) => Observable<Company>>(),
       remove: vi.fn<(id: number) => Observable<void>>()
     };
+    authService = {
+      isAdmin: vi.fn(() => true)
+    };
 
     companyService.findAll.mockReturnValue(of(companiesMock));
 
     TestBed.configureTestingModule({
       imports: [CompaniesComponent],
-      providers: [{ provide: CompanyService, useValue: companyService }]
+      providers: [
+        { provide: CompanyService, useValue: companyService },
+        { provide: AuthService, useValue: authService }
+      ]
     });
 
     fixture = TestBed.createComponent(CompaniesComponent);
@@ -166,5 +174,20 @@ describe('CompaniesComponent', () => {
     expect(component.companiesLoaded).toBe(true);
     expect(component.errorMessage).toBe('Não foi possível processar a solicitação.');
     expect(fixture.nativeElement.textContent).toContain('Não foi possível carregar as empresas.');
+  });
+
+  it('renders companies in read-only mode for USER', () => {
+    authService.isAdmin.mockReturnValue(false);
+    fixture = TestBed.createComponent(CompaniesComponent);
+    component = fixture.componentInstance;
+
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain(
+      'Seu perfil possui acesso somente para consulta de empresas.'
+    );
+    expect(fixture.nativeElement.textContent).not.toContain('Nova empresa');
+    expect(fixture.nativeElement.textContent).not.toContain('Editar');
+    expect(fixture.nativeElement.textContent).not.toContain('Excluir');
   });
 });

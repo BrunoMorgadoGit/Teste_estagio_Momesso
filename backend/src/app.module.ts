@@ -35,7 +35,8 @@ import { Machine } from './machine/entities/machine.entity';
         password: config.get<string>('DATABASE_PASSWORD', 'postgres'),
         database: config.get<string>('DATABASE_NAME', 'momesso'),
         entities: [Company, User, Machine],
-        synchronize: config.get<string>('TYPEORM_SYNCHRONIZE', 'true') === 'true',
+        synchronize:
+          config.get<string>('TYPEORM_SYNCHRONIZE', 'true') === 'true',
       }),
     }),
     CompanyModule,

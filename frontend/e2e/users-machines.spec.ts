@@ -14,6 +14,14 @@ async function selectFirstCompany(page: Page) {
   await companySelect.selectOption({ index: 1 });
 }
 
+async function loginAsUser(page: Page) {
+  await page.goto('/login');
+  await page.getByLabel('Email').fill('user@momesso.com');
+  await page.locator('input[formcontrolname="password"]').fill('User@123');
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  await expect(page).toHaveURL(/\/companies$/);
+}
+
 test('supports user refresh, create, edit and delete', async ({ page }) => {
   await loginAsAdmin(page);
 
@@ -116,4 +124,23 @@ test('supports machine refresh, create, edit and delete', async ({ page }) => {
 
   await expect(page.getByText('Máquina excluída.')).toBeVisible();
   await expect(page.getByRole('row', { name: new RegExp(editedMachineName) })).toHaveCount(0);
+});
+
+test('USER sees the same routes in read-only mode', async ({ page }) => {
+  await loginAsUser(page);
+
+  await expect(page.getByText('Seu perfil possui acesso somente para consulta de empresas.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Nova empresa' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Editar' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Excluir' })).toHaveCount(0);
+
+  await page.goto('/users');
+  await expect(page.getByText('Seu perfil possui acesso somente para consulta de usuários.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Novo usuário' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Criar usuário' })).toHaveCount(0);
+
+  await page.goto('/machines');
+  await expect(page.getByText('Seu perfil possui acesso somente para consulta de máquinas.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Nova máquina' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Criar máquina' })).toHaveCount(0);
 });

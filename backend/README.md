@@ -128,8 +128,9 @@ Roles:
 
 - `ADMIN`: acessa todos os registros.
 - `USER`: acessa apenas empresas, usuarios e maquinas da propria empresa.
-- `USER` recebe `403 Forbidden` ao tentar buscar, alterar ou remover dados de outra empresa.
-- Criacao, alteracao e remocao de `Company` sao restritas a `ADMIN`.
+- `USER` recebe `403 Forbidden` ao tentar buscar dados de outra empresa.
+- `USER` recebe `403 Forbidden` ao tentar criar, alterar ou remover empresas, usuarios e maquinas.
+- Criacao, alteracao e remocao sao restritas a `ADMIN`.
 
 Profile:
 

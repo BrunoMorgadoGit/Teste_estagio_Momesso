@@ -77,9 +77,9 @@ senha: User@123
 ## Telas implementadas
 
 - `/login`: autenticação com JWT.
-- `/companies`: CRUD de empresas.
-- `/users`: CRUD de usuários.
-- `/machines`: CRUD de máquinas.
+- `/companies`: CRUD completo para `ADMIN` e visualização da própria empresa para `USER`.
+- `/users`: CRUD completo para `ADMIN` e visualização dos usuários da própria empresa para `USER`.
+- `/machines`: CRUD completo para `ADMIN` e visualização das máquinas da própria empresa para `USER`.
 
 Rotas internas são protegidas por `AuthGuard`. O token é salvo em `localStorage` e enviado automaticamente em requisições HTTP com `Authorization: Bearer TOKEN`.
 
@@ -90,8 +90,10 @@ Rotas internas são protegidas por `AuthGuard`. O token é salvo em `localStorag
 3. Inicie o front com `npm start`.
 4. Abra `http://localhost:4200`.
 5. Tente acessar `/companies` sem login: deve redirecionar para `/login`.
-6. Faça login com o usuário ADMIN.
-7. Teste criar, listar, editar e excluir empresas, usuários e máquinas.
-8. Faça logout e confirme que o token foi removido.
+6. Faça login com o usuário ADMIN e valide o CRUD completo.
+7. Faça logout e entre com o usuário USER.
+8. Valide que a sidebar mostra email e role corretos.
+9. Valide que USER não vê botões administrativos e acessa apenas dados da própria empresa.
+10. Faça logout e confirme que o token foi removido.
 
 O front-end não exibe senha de usuário em nenhuma tabela ou tela pública.

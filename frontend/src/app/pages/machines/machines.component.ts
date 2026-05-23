@@ -11,6 +11,7 @@ import { finalize } from 'rxjs';
 
 import { Company } from '../../core/models/company.model';
 import { CreateMachineRequest, Machine } from '../../core/models/machine.model';
+import { AuthService } from '../../core/services/auth.service';
 import { CompanyService } from '../../core/services/company.service';
 import { MachineService } from '../../core/services/machine.service';
 
@@ -20,14 +21,20 @@ import { MachineService } from '../../core/services/machine.service';
   template: `
     <section class="page-header">
       <div>
-        <p class="eyebrow">Admin / Máquinas</p>
+        <p class="eyebrow">{{ isAdmin ? 'Admin' : 'Consulta' }} / Máquinas</p>
         <h2>Máquinas</h2>
-        <p class="page-subtitle">Gerencie as máquinas cadastradas no sistema.</p>
+        <p class="page-subtitle">
+          {{ isAdmin
+            ? 'Gerencie as máquinas cadastradas no sistema.'
+            : 'Visualize apenas as máquinas da sua própria empresa.' }}
+        </p>
       </div>
-      <button type="button" class="button primary" (click)="startNewMachine()">
-        <span aria-hidden="true">+</span>
-        Nova máquina
-      </button>
+      @if (isAdmin) {
+        <button type="button" class="button primary" (click)="startNewMachine()">
+          <span aria-hidden="true">+</span>
+          Nova máquina
+        </button>
+      }
     </section>
 
     @if (message) {
@@ -36,42 +43,47 @@ import { MachineService } from '../../core/services/machine.service';
     @if (errorMessage) {
       <div class="alert error">{{ errorMessage }}</div>
     }
+    @if (!isAdmin) {
+      <div class="alert success">Seu perfil possui acesso somente para consulta de máquinas.</div>
+    }
 
-    <section #machineFormPanel class="panel" [class.panel-highlight]="formHighlighted" tabindex="-1">
-      <div class="panel-heading">
-        <div>
-          <h3>{{ editingId ? 'Editar máquina' : 'Cadastrar máquina' }}</h3>
-          <p>Informe os dados principais e o vínculo da máquina com a empresa.</p>
+    @if (isAdmin) {
+      <section #machineFormPanel class="panel" [class.panel-highlight]="formHighlighted" tabindex="-1">
+        <div class="panel-heading">
+          <div>
+            <h3>{{ editingId ? 'Editar máquina' : 'Cadastrar máquina' }}</h3>
+            <p>Informe os dados principais e o vínculo da máquina com a empresa.</p>
+          </div>
         </div>
-      </div>
-      <form [formGroup]="form" (ngSubmit)="save()" class="entity-form">
-        <label>
-          Nome
-          <input #machineNameInput type="text" formControlName="name" placeholder="Ex.: Injetora 01" />
-        </label>
-        <label>
-          Número de série
-          <input type="text" formControlName="serialNumber" placeholder="Ex.: MAQ-001" />
-        </label>
-        <label>
-          Empresa
-          <select formControlName="companyId">
-            <option [ngValue]="0">Selecione uma empresa</option>
-            @for (company of companies; track company.id) {
-              <option [ngValue]="company.id">{{ company.name }} #{{ company.id }}</option>
+        <form [formGroup]="form" (ngSubmit)="save()" class="entity-form">
+          <label>
+            Nome
+            <input #machineNameInput type="text" formControlName="name" placeholder="Ex.: Injetora 01" />
+          </label>
+          <label>
+            Número de série
+            <input type="text" formControlName="serialNumber" placeholder="Ex.: MAQ-001" />
+          </label>
+          <label>
+            Empresa
+            <select formControlName="companyId">
+              <option [ngValue]="0">Selecione uma empresa</option>
+              @for (company of companies; track company.id) {
+                <option [ngValue]="company.id">{{ company.name }} #{{ company.id }}</option>
+              }
+            </select>
+          </label>
+          <div class="form-actions">
+            <button class="button primary" type="submit" [disabled]="form.invalid || loading">
+              {{ editingId ? 'Salvar alterações' : 'Criar máquina' }}
+            </button>
+            @if (editingId) {
+              <button type="button" class="button secondary" (click)="resetForm()">Cancelar</button>
             }
-          </select>
-        </label>
-        <div class="form-actions">
-          <button class="button primary" type="submit" [disabled]="form.invalid || loading">
-            {{ editingId ? 'Salvar alterações' : 'Criar máquina' }}
-          </button>
-          @if (editingId) {
-            <button type="button" class="button secondary" (click)="resetForm()">Cancelar</button>
-          }
-        </div>
-      </form>
-    </section>
+          </div>
+        </form>
+      </section>
+    }
 
     <section class="panel">
       <div class="table-header">
@@ -90,13 +102,15 @@ import { MachineService } from '../../core/services/machine.service';
               <th>Número de série</th>
               <th>Company ID</th>
               <th>Criado em</th>
-              <th>Ações</th>
+              @if (isAdmin) {
+                <th>Ações</th>
+              }
             </tr>
           </thead>
           <tbody>
             @if (machinesLoading) {
               <tr>
-                <td colspan="6" class="empty-state">
+                <td [attr.colspan]="isAdmin ? 6 : 5" class="empty-state">
                   <div class="empty-state-content">
                     <span class="loading-dot" aria-hidden="true"></span>
                     <strong>Carregando máquinas...</strong>
@@ -106,7 +120,7 @@ import { MachineService } from '../../core/services/machine.service';
               </tr>
             } @else if (errorMessage && machinesLoaded && machines.length === 0) {
               <tr>
-                <td colspan="6" class="empty-state">
+                <td [attr.colspan]="isAdmin ? 6 : 5" class="empty-state">
                   <div class="empty-state-content">
                     <strong>Não foi possível carregar as máquinas.</strong>
                     <span>Verifique sua conexão ou tente atualizar novamente.</span>
@@ -121,14 +135,16 @@ import { MachineService } from '../../core/services/machine.service';
                   <td>{{ machine.serialNumber }}</td>
                   <td>{{ machine.companyId }}</td>
                   <td>{{ formatDate(machine.createdAt) }}</td>
-                  <td class="actions">
-                    <button type="button" class="button compact" (click)="edit(machine)">Editar</button>
-                    <button type="button" class="button danger compact" (click)="remove(machine)">Excluir</button>
-                  </td>
+                  @if (isAdmin) {
+                    <td class="actions">
+                      <button type="button" class="button compact" (click)="edit(machine)">Editar</button>
+                      <button type="button" class="button danger compact" (click)="remove(machine)">Excluir</button>
+                    </td>
+                  }
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="6" class="empty-state">
+                  <td [attr.colspan]="isAdmin ? 6 : 5" class="empty-state">
                     <div class="empty-state-content">
                       <strong>Nenhuma máquina encontrada.</strong>
                       <span>Cadastre sua primeira máquina para começar.</span>
@@ -144,6 +160,7 @@ import { MachineService } from '../../core/services/machine.service';
   `
 })
 export class MachinesComponent implements OnInit {
+  private readonly authService = inject(AuthService);
   private readonly machineService = inject(MachineService);
   private readonly companyService = inject(CompanyService);
   private readonly fb = inject(FormBuilder);
@@ -160,6 +177,7 @@ export class MachinesComponent implements OnInit {
   formHighlighted = false;
   errorMessage = '';
   message = '';
+  readonly isAdmin = this.authService.isAdmin();
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required]],
@@ -206,6 +224,11 @@ export class MachinesComponent implements OnInit {
   }
 
   save(): void {
+    if (!this.isAdmin) {
+      this.blockAdminOnlyAction();
+      return;
+    }
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -229,6 +252,11 @@ export class MachinesComponent implements OnInit {
   }
 
   edit(machine: Machine): void {
+    if (!this.isAdmin) {
+      this.blockAdminOnlyAction();
+      return;
+    }
+
     this.editingId = machine.id;
     this.form.patchValue({
       name: machine.name,
@@ -239,6 +267,11 @@ export class MachinesComponent implements OnInit {
   }
 
   remove(machine: Machine): void {
+    if (!this.isAdmin) {
+      this.blockAdminOnlyAction();
+      return;
+    }
+
     if (!confirm(`Excluir máquina ${machine.name}?`)) {
       return;
     }
@@ -263,6 +296,11 @@ export class MachinesComponent implements OnInit {
   }
 
   startNewMachine(): void {
+    if (!this.isAdmin) {
+      this.blockAdminOnlyAction();
+      return;
+    }
+
     this.resetForm();
     this.focusMachineForm();
   }
@@ -327,5 +365,10 @@ export class MachinesComponent implements OnInit {
     this.errorMessage = error.status === 403
       ? 'Acesso negado para esta operação.'
       : 'Não foi possível excluir a máquina. Tente novamente.';
+  }
+
+  private blockAdminOnlyAction(): void {
+    this.message = '';
+    this.errorMessage = 'Somente administradores podem criar, editar ou excluir máquinas.';
   }
 }

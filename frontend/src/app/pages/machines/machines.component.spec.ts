@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Company } from '../../core/models/company.model';
 import { CreateMachineRequest, Machine } from '../../core/models/machine.model';
+import { AuthService } from '../../core/services/auth.service';
 import { CompanyService } from '../../core/services/company.service';
 import { MachineService } from '../../core/services/machine.service';
 import { MachinesComponent } from './machines.component';
@@ -37,6 +38,7 @@ describe('MachinesComponent', () => {
     remove: ReturnType<typeof vi.fn>;
   };
   let companyService: { findAll: ReturnType<typeof vi.fn> };
+  let authService: { isAdmin: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     machineService = {
@@ -48,6 +50,9 @@ describe('MachinesComponent', () => {
     companyService = {
       findAll: vi.fn<() => Observable<Company[]>>()
     };
+    authService = {
+      isAdmin: vi.fn(() => true)
+    };
 
     machineService.findAll.mockReturnValue(of(machinesMock));
     companyService.findAll.mockReturnValue(of(companiesMock));
@@ -56,7 +61,8 @@ describe('MachinesComponent', () => {
       imports: [MachinesComponent],
       providers: [
         { provide: MachineService, useValue: machineService },
-        { provide: CompanyService, useValue: companyService }
+        { provide: CompanyService, useValue: companyService },
+        { provide: AuthService, useValue: authService }
       ]
     });
 
@@ -198,5 +204,21 @@ describe('MachinesComponent', () => {
     expect(machineService.remove).toHaveBeenCalledWith(1);
     expect(machineService.findAll).toHaveBeenCalledTimes(2);
     expect(component.message).toBe('Máquina excluída.');
+  });
+
+  it('renders machines in read-only mode for USER', () => {
+    authService.isAdmin.mockReturnValue(false);
+    fixture = TestBed.createComponent(MachinesComponent);
+    component = fixture.componentInstance;
+
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain(
+      'Seu perfil possui acesso somente para consulta de máquinas.'
+    );
+    expect(fixture.nativeElement.textContent).not.toContain('Nova máquina');
+    expect(fixture.nativeElement.textContent).not.toContain('Criar máquina');
+    expect(fixture.nativeElement.textContent).not.toContain('Editar');
+    expect(fixture.nativeElement.textContent).not.toContain('Excluir');
   });
 });

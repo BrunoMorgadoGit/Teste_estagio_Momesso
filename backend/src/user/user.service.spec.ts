@@ -1,4 +1,8 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
 import { Company } from '../company/entities/company.entity';
@@ -29,6 +33,13 @@ describe('UserService', () => {
     companyId: 1,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     company: undefined as never,
+  };
+
+  const regularUser = {
+    id: 2,
+    email: 'user@momesso.com',
+    role: UserRole.USER,
+    companyId: 1,
   };
 
   beforeEach(() => {
@@ -102,6 +113,21 @@ describe('UserService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
+  it('should reject user creation by USER role', async () => {
+    await expect(
+      service.create(
+        {
+          name: user.name,
+          email: user.email,
+          password: '123456',
+          role: UserRole.ADMIN,
+          companyId: 1,
+        },
+        regularUser,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
   it('should find user by email with password for login', async () => {
     userRepository.findOne.mockResolvedValue(user);
 
@@ -128,5 +154,23 @@ describe('UserService', () => {
     });
 
     await expect(service.remove(1)).resolves.toBeUndefined();
+  });
+
+  it('should reject user update by USER role', async () => {
+    await expect(
+      service.update(
+        1,
+        {
+          name: 'Blocked update',
+        },
+        regularUser,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('should reject user removal by USER role', async () => {
+    await expect(service.remove(1, regularUser)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
   });
 });

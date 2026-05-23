@@ -1,6 +1,11 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { Company } from '../company/entities/company.entity';
+import { UserRole } from '../common/enums/user-role.enum';
 import { Machine } from './entities/machine.entity';
 import { MachineService } from './machine.service';
 
@@ -21,6 +26,13 @@ describe('MachineService', () => {
     companyId: 1,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     company: undefined as never,
+  };
+
+  const regularUser = {
+    id: 2,
+    email: 'user@momesso.com',
+    role: UserRole.USER,
+    companyId: 1,
   };
 
   beforeEach(() => {
@@ -81,6 +93,19 @@ describe('MachineService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
+  it('should reject machine creation by USER role', async () => {
+    await expect(
+      service.create(
+        {
+          name: machine.name,
+          serialNumber: machine.serialNumber,
+          companyId: 1,
+        },
+        regularUser,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
   it('should remove machine when delete affects a row', async () => {
     machineRepository.findOne.mockResolvedValue(machine);
     machineRepository.delete.mockResolvedValue({
@@ -89,5 +114,23 @@ describe('MachineService', () => {
     });
 
     await expect(service.remove(1)).resolves.toBeUndefined();
+  });
+
+  it('should reject machine update by USER role', async () => {
+    await expect(
+      service.update(
+        1,
+        {
+          name: 'Blocked update',
+        },
+        regularUser,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('should reject machine removal by USER role', async () => {
+    await expect(service.remove(1, regularUser)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
   });
 });

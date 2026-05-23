@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -14,6 +16,15 @@ import { Machine } from './machine/entities/machine.entity';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => [
+        {
+          ttl: Number(config.get<string>('RATE_LIMIT_TTL_MS', '60000')),
+          limit: Number(config.get<string>('RATE_LIMIT_MAX', '100')),
+        },
+      ],
+    }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -24,7 +35,7 @@ import { Machine } from './machine/entities/machine.entity';
         password: config.get<string>('DATABASE_PASSWORD', 'postgres'),
         database: config.get<string>('DATABASE_NAME', 'momesso'),
         entities: [Company, User, Machine],
-        synchronize: true,
+        synchronize: config.get<string>('TYPEORM_SYNCHRONIZE', 'true') === 'true',
       }),
     }),
     CompanyModule,
@@ -33,6 +44,12 @@ import { Machine } from './machine/entities/machine.entity';
     AuthModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

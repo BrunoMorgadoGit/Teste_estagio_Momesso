@@ -29,6 +29,10 @@ DATABASE_PASSWORD=postgres
 DATABASE_NAME=momesso
 JWT_SECRET=supersecret
 JWT_EXPIRES_IN=1d
+TYPEORM_SYNCHRONIZE=true
+CORS_ORIGIN=http://localhost:4200
+RATE_LIMIT_TTL_MS=60000
+RATE_LIMIT_MAX=100
 ```
 
 ## Docker/PostgreSQL
@@ -133,6 +137,18 @@ Profile:
 curl http://localhost:3000/auth/profile \
   -H "Authorization: Bearer <TOKEN>"
 ```
+
+## Segurança HTTP
+
+O backend aplica:
+
+- `helmet` para headers de seguranca.
+- `ValidationPipe` com whitelist, bloqueio de campos extras e transformacao.
+- Rate limiting global com `@nestjs/throttler`.
+- `trust proxy` para funcionar corretamente atras de Nginx, Cloud Run ou load balancer.
+- CORS controlado por `CORS_ORIGIN`.
+
+Em producao, use `TYPEORM_SYNCHRONIZE=false` e um `JWT_SECRET` forte armazenado em cofre de segredos.
 
 ## Endpoints
 
